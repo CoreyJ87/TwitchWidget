@@ -24,6 +24,7 @@ class twitch_widget extends WP_Widget
 
         $title = $instance['title'];
         $game = $instance['game'];
+        $limit = $instance['limit'];
         ?>
         <p><label for="<?php echo $this->get_field_id('title'); ?>">Title: <input class="widefat"
                                                                                   id="<?php echo $this->get_field_id('title'); ?>"
@@ -37,7 +38,12 @@ class twitch_widget extends WP_Widget
                                                                                 type="text"
                                                                                 value="<?php echo attribute_escape($game); ?>"/></label>
         </p>
-
+        <p><label for="<?php echo $this->get_field_id('limit'); ?>">Limit: <input class="widefat"
+                                                                                  id="<?php echo $this->get_field_id('limit'); ?>"
+                                                                                  name="<?php echo $this->get_field_name('limit'); ?>"
+                                                                                  type="text"
+                                                                                  value="<?php echo attribute_escape($limit); ?>"/></label>
+        </p>
     <?php
     }
 
@@ -48,6 +54,7 @@ class twitch_widget extends WP_Widget
         // Retrieve Fields
         $instance['title'] = strip_tags($new_instance['title']);
         $instance['game'] = strip_tags($new_instance['game']);
+        $instance['limit'] = strip_tags($new_instance['limit']);
 
         return $instance;
     }
@@ -60,35 +67,34 @@ class twitch_widget extends WP_Widget
 
         $title = empty($instance['title']) ? ' ' : apply_filters('widget_title', $instance['title']);
         $game = $instance['game'];
+        $limit = empty($instance['limit']) ? 6 : $instance['limit'] + 1;
 
-        if (empty($title)) {
+        if (empty($title))
             echo '<div>Missing widget title</div>';
-        } else {
+        else
             echo $before_title . $title . $after_title;
-        }
-        if (empty($game)) {
+
+        if (empty($game))
             echo "<div>Please select a game to search for</div>";
-        } else {
-            $fields = array("query" => $game, "offset" => 0, "limit" => 5);
+        else {
+            $fields = array("query" => $game, "offset" => 0, "limit" => $limit);
             $list = curlItGet('https://api.twitch.tv/kraken/search/streams?', $fields);
         }
-        if (!empty($title) && $list != false) {
+        if (!empty($title) && $list != false && count($list->streams) > 0) {
             echo '<div class="twitchData">';
-            if (count($list->streams) == 0) {
-                echo 'No streams found for selected game</div>';
-            } else {
-                foreach ($list->streams as $single_stream) {
-                    echo '<div class="streamer" id="' . $single_stream->channel->display_name . '">'
-                        . '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
-                        . '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
-                        . '<div class="user_name">'
-                        . '<a href="' . $single_stream->channel->url . '" target="_blank">' . $single_stream->channel->display_name
-                        . '</a></div>'
-                        . '<div class="user_status">' . $single_stream->channel->status . '</div>'
-                        . '<div class="user_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
-                }
-                echo '</div>';
+            foreach ($list->streams as $single_stream) {
+                echo '<div class="streamer" id="' . $single_stream->channel->display_name . '">'
+                    . '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
+                    . '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
+                    . '<div class="user_name">'
+                    . '<a href="' . $single_stream->channel->url . '" target="_blank">' . $single_stream->channel->display_name
+                    . '</a></div>'
+                    . '<div class="user_status">' . $single_stream->channel->status . '</div>'
+                    . '<div class="user_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
             }
+            echo '</div>';
+        } else if (!empty($title) && $list != false && count($list->streams == 0)) {
+            echo '<div>Twitch did not return any results for selected game</div>';
         } else {
             echo '<div>Twitch failed to respond. Please refresh to try again</div>';
         }
