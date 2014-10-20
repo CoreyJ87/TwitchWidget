@@ -14,7 +14,7 @@ class twitch_widget extends WP_Widget
 {
     function twitch_widget()
     {
-        $widget_ops = array('classname' => 'twitch_widget', 'description' => 'Displays a widget with Clash of Clans Channels in it. ');
+        $widget_ops = array('classname' => 'twitch_widget', 'description' => 'Displays a widget with a list of streamers. Streaming a certain game. ');
         $this->WP_Widget('twitch_widget', 'Twitch Widget', $widget_ops);
     }
 
@@ -62,31 +62,33 @@ class twitch_widget extends WP_Widget
         $game = $instance['game'];
 
         if (empty($title)) {
-            echo '<div>Missing widget Title</div>';
+            echo '<div>Missing widget title</div>';
         } else {
             echo $before_title . $title . $after_title;
         }
-
         if (empty($game)) {
-            echo "<div>Missing Game Widget Setting</div>";
+            echo "<div>Please select a game to search for</div>";
         } else {
             $fields = array("query" => $game, "offset" => 0, "limit" => 5);
             $list = curlItGet('https://api.twitch.tv/kraken/search/streams?', $fields);
         }
         if (!empty($title) && $list != false) {
             echo '<div class="twitchData">';
-            foreach ($list->streams as $single_stream) {
-                echo '<div class="twitch_streamer" id="' . $single_stream->channel->display_name . '">'
-                    . '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
-                    . '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
-                    . '<div class="twitch_username">'
-                    . '<a href="' . $single_stream->channel->url . '" target="_blank">' . $single_stream->channel->display_name
-                    . '</a></div>'
-                    . '<div class="twitch_status">' . $single_stream->channel->status . '</div>'
-                    . '<div class="twitch_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
+            if (count($list->streams) == 0) {
+                echo 'No streams found for selected game</div>';
+            } else {
+                foreach ($list->streams as $single_stream) {
+                    echo '<div class="streamer" id="' . $single_stream->channel->display_name . '">'
+                        . '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
+                        . '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
+                        . '<div class="user_name">'
+                        . '<a href="' . $single_stream->channel->url . '" target="_blank">' . $single_stream->channel->display_name
+                        . '</a></div>'
+                        . '<div class="user_status">' . $single_stream->channel->status . '</div>'
+                        . '<div class="user_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
+                }
+                echo '</div>';
             }
-            echo '</div>';
-
         } else {
             echo '<div>Twitch failed to respond. Please refresh to try again</div>';
         }
@@ -95,15 +97,11 @@ class twitch_widget extends WP_Widget
 
 }
 
-add_action('widgets_init', create_function('', 'return register_widget("twitch_widget");'));
-
-
 function rbw_scripts()
 {
     wp_enqueue_style("rbw_css", path_join(WP_PLUGIN_URL, basename(dirname(__FILE__)) . "/styles.css"));
 }
 
-add_action('wp_enqueue_scripts', 'rbw_scripts');
 
 function curlItGet($url, $fields)
 {
@@ -122,10 +120,11 @@ function curlItGet($url, $fields)
         $decoded = json_decode($result);
         curl_close($ch);
         return $decoded;
-    }
-    else
+    } else
         curl_close($ch);
-        return false;
+    return false;
 }
 
+add_action('widgets_init', create_function('', 'return register_widget("twitch_widget");'));
+add_action('wp_enqueue_scripts', 'rbw_scripts');
 ?>
