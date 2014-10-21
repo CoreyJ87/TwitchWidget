@@ -67,7 +67,7 @@ class twitch_widget extends WP_Widget
 
         $title = empty($instance['title']) ? ' ' : apply_filters('widget_title', $instance['title']);
         $game = $instance['game'];
-        $limit = empty($instance['limit']) ? 6 : $instance['limit'] + 1;
+        $limit = empty($instance['limit']) ? 5 : $instance['limit'];
 
         if (empty($title))
             echo '<div>Missing widget title</div>';
@@ -77,23 +77,29 @@ class twitch_widget extends WP_Widget
         if (empty($game))
             echo "<div>Please select a game to search for</div>";
         else {
-            $fields = array("query" => $game, "offset" => 0, "limit" => $limit);
-            $list = curlItGet('https://api.twitch.tv/kraken/search/streams?', $fields);
+            $debug = true;
+            $fields = array("query" => $game, "limit" => $limit);
+            if ($debug) {
+                echo '<script type="text/javascript">console.log(' . $limit . ')</script>';
+            }
+            $list = curlItGet('https://api.twitch.tv/kraken/search/streams?', $fields,$debug);
         }
-        if (!empty($title) && $list != false && count($list->streams) > 0) {
+        if (!empty($title) && $list != "fail" && count($list->streams) > 0) {
             echo '<div class="twitchData">';
             foreach ($list->streams as $single_stream) {
-                echo '<div class="streamer" id="' . $single_stream->channel->display_name . '">'
-                    . '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
-                    . '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
-                    . '<div class="user_name">'
+                echo '<div class="user_content streamer" id="' . $single_stream->channel->display_name . '">'
+                    //. '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
+                    //. '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
+                    . '<div class="user_content user_preview"><a href="' . $single_stream->channel->url . '" target="_blank">'
+                    . '<img src="' . $single_stream->preview->medium . '" id="user_preview_image"></a></div>'
+                    . '<div class="user_content user_name">'
                     . '<a href="' . $single_stream->channel->url . '" target="_blank">' . $single_stream->channel->display_name
                     . '</a></div>'
-                    . '<div class="user_status">' . $single_stream->channel->status . '</div>'
-                    . '<div class="user_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
+                    . '<div class="user_content user_status">' . $single_stream->channel->status . '</div>'
+                    . '<div class="user_content user_viewers"><b>Viewers:</b>' . $single_stream->viewers . '</div></div>';
             }
             echo '</div>';
-        } else if (!empty($title) && $list != false && count($list->streams == 0)) {
+        } else if (!empty($title) && $list != "fail" && count($list->streams == 0)) {
             echo '<div>Twitch did not return any results for selected game</div>';
         } else {
             echo '<div>Twitch failed to respond. Please refresh to try again</div>';
@@ -109,7 +115,7 @@ function rbw_scripts()
 }
 
 
-function curlItGet($url, $fields)
+function curlItGet($url, $fields,$debug)
 {
     $fields_string = "";
     foreach ($fields as $key => $value) {
@@ -118,17 +124,21 @@ function curlItGet($url, $fields)
     }
     $trimmed_string = substr($fields_string, 0, -1);
     $ch = curl_init();
-    $options = array(CURLOPT_URL => $url . $trimmed_string, CURLOPT_RETURNTRANSFER => 1, CURLOPT_SSL_VERIFYPEER => 1);
+    $options = array(CURLOPT_URL => $url . $trimmed_string, CURLOPT_RETURNTRANSFER => 1, CURLOPT_SSL_VERIFYPEER => 1,CURLOPT_HTTPHEADER=>array('Accept: application/vnd.twitchtv.v3+json'));
     curl_setopt_array($ch, $options);
     $result = curl_exec($ch);
+    if ($debug) {
+        echo '<script type="text/javascript">console.log(' . $result . ')</script>';
+    }
     $info = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     if ($info == 200) {
         $decoded = json_decode($result);
         curl_close($ch);
         return $decoded;
-    } else
+    } else {
         curl_close($ch);
-    return false;
+        return "fail";
+    }
 }
 
 add_action('widgets_init', create_function('', 'return register_widget("twitch_widget");'));
