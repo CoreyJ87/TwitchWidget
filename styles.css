@@ -16,3 +16,13 @@
 #user_preview_image {
     width:120px;
 }
+
+.video_container {
+    width: 280px;
+    display: inline-table;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+.preview_image {
+    width: 240px;
+}

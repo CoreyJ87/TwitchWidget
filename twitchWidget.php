@@ -77,7 +77,7 @@ class twitch_widget extends WP_Widget
         if (empty($game))
             echo "<div>Please select a game to search for</div>";
         else {
-            $debug = true;
+            $debug = false;
             $fields = array("query" => $game, "limit" => $limit);
             if ($debug) {
                 echo '<script type="text/javascript">console.log(' . $limit . ')</script>';
@@ -88,8 +88,6 @@ class twitch_widget extends WP_Widget
             echo '<div class="twitchData">';
             foreach ($list->streams as $single_stream) {
                 echo '<div class="user_content streamer" id="' . $single_stream->channel->display_name . '">'
-                    //. '<div class="user_logo"><a href="' . $single_stream->channel->url . '" target="_blank">'
-                    //. '<img src="' . $single_stream->channel->logo . '" style="width: 40px;height:40px;"></a></div>'
                     . '<div class="user_content user_preview"><a href="' . $single_stream->channel->url . '" target="_blank">'
                     . '<img src="' . $single_stream->preview->medium . '" id="user_preview_image"></a></div>'
                     . '<div class="user_content user_name">'
@@ -112,6 +110,7 @@ class twitch_widget extends WP_Widget
 function rbw_scripts()
 {
     wp_enqueue_style("rbw_css", path_join(WP_PLUGIN_URL, basename(dirname(__FILE__)) . "/styles.css"));
+    wp_enqueue_script( 'main', path_join(WP_PLUGIN_URL, basename(dirname(__FILE__)) . '/main.js', array(), '1.0.0', true ));
 }
 
 
@@ -140,7 +139,31 @@ function curlItGet($url, $fields,$debug)
         return "fail";
     }
 }
-
+function twitchVids( $atts ) {
+    $attrs = shortcode_atts( array(
+        'game' => 'default',
+        'limit' => '5',
+        'period' => 'month'
+    ), $atts );
+    $debug = true;
+    $fields = array("game" => $attrs['game'], "limit" => $attrs['limit'],'period'=> $attrs['period'] );
+    if ($debug) {
+        echo '<script type="text/javascript">console.log(' . $attrs["limit"] . ')</script>';
+    }
+    $list = curlItGet('https://api.twitch.tv/kraken/videos/top?', $fields,$debug);
+    if ($list != "fail" && count($list->videos) > 0) {
+        echo '<div class="twitchData">';
+        foreach ($list->videos as $single_video) {
+            echo '<div class="video_container" channel="' . $single_video->channel->name . '" id="' . str_replace('c', '', $single_video->_id) . '">'
+                . '<div class="user_content video_title">' . $single_video->title . '</div>'
+                . '<div class="user_content video_preview"><img src="' . $single_video->preview . '" class="preview_image"></div>'
+                . '<div class="user_content video_description">' . $single_video->description . '</div>'
+                . '<div class="user_content video_popout"><a href="'.$single_video->url.'" target="_blank">Open video in new window</a></div></div>';
+        }
+        echo '</div>';
+    }
+}
+add_shortcode( 'twitchVideos', 'twitchVids' );
 add_action('widgets_init', create_function('', 'return register_widget("twitch_widget");'));
 add_action('wp_enqueue_scripts', 'rbw_scripts');
 ?>
